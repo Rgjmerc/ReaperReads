@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request, redirect, flash
+import flask_login
 import pymysql
 from dynaconf import Dynaconf
 
@@ -9,6 +10,33 @@ conf = Dynaconf(
 )
 
 app.secret_key = conf.secret_key
+
+login_manager = flask_login.LoginManager()
+login_manager.init_app(app)
+
+class User:
+    is_authenticated = True
+    is_anonymous = False
+    is_active = True
+    def __init__(self, user_id, username, email, first_name, last_name):
+        self.id = user_id
+        self.username = username
+        self.email = email
+        self.first_name = first_name
+        self.last_name = last_name
+    def get_id(self):
+        return str(self.id)
+
+@login_manager.user_loader
+def load_user(user_id):
+    conn = connectdb()
+    cursor = conn.cursor()
+    cursor.execute(f"SELECT * FROM `Customer` WHERE `id` = {user_id};")
+    result = cursor.fetchone()
+    cursor.close()
+    conn.close()
+    if result is not None:
+        return User(result["id"], result["username"], result["email"], result["first_name"], result["last_name"])
 
 def connectdb():
     conn = pymysql.connect(
@@ -83,6 +111,26 @@ def signup():
 
     return render_template("signup.html.jinja")
     
-@app.route("/signin")
+@app.route("/signin", methods = ["POST","GET"])
 def signin():
+    if request.method == "POST":
+        username = request.form["username"].strip()
+        password = request.form["pass"]
+        conn = connectdb()
+        cursor = conn.cursor()
+        cursor.execute(f"SELECT * FROM `Customer` WHERE `username` = '{username}' OR `email` = '{username}';")
+        result = cursor.fetchone()
+        if result is None:
+            flash("Your Username/Password is incorrect")
+        elif password != result["password"]:
+            flash("Your Username/Password is incorrect")
+        else:
+            user = User(result["id"], result["username"], result["email"], result["first_name"], result["last_name"])
+            flask_login.login_user(user)
+            return redirect("/browse")
     return render_template("signin.html.jinja")
+
+@app.route("/logout")
+def logout():
+    flask_login.logout_user()
+    return redirect("/")

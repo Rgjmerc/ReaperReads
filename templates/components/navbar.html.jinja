@@ -24,14 +24,28 @@
             <li><a class="dropdown-item" href="#">Jojo's Bizzare Adventure</a></li>
           </ul>
         </li>
-        <li class="nav-item">
-          <a class="nav-link" href="/signup ">Sign-Up</a>
-        </li>
+        
       </ul>
       <form class="d-flex" role="search" action="/browse">
         <input class="form-control me-2" name="query" type="search" placeholder="Search" aria-label="Search">
         <button class="btn btn-info" type="submit">Search</button>
       </form>
+      {% if current_user.is_authenticated %}
+      <div class="dropdown ps-2">
+        <button class="btn btn-warning dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+           Hello {{current_user.username}}
+        </button>
+        <ul class="dropdown-menu">
+            <li><a class="dropdown-item" href="#">View Account</a></li>
+            <li><a class="dropdown-item" href="#">Another action</a></li>
+            <li><a class="dropdown-item" href="\logout">Sign Out</a></li>
+        </ul>
+        </div>
+      {%else%}
+        <div class="ps-2">
+          <a class="btn btn-outline-warning" href="/signin ">Sign-In</a>
+        </div>
+      {%endif%}
     </div>
   </div>
 </nav>
