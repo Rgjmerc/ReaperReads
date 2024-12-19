@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, flash
+from flask import Flask, render_template, request, redirect, flash, abort
 import flask_login
 import pymysql
 from dynaconf import Dynaconf
@@ -13,6 +13,7 @@ app.secret_key = conf.secret_key
 
 login_manager = flask_login.LoginManager()
 login_manager.init_app(app)
+login_manager.login_view = "/signin"
 
 class User:
     is_authenticated = True
@@ -74,63 +75,75 @@ def product_page(product_id):
     cursor = conn.cursor()
     cursor.execute(f"SELECT * FROM `Product` WHERE `id` = {product_id};")
     result = cursor.fetchone()
+    if result is None:
+        abort(404)
     cursor.close()
     conn.close()
     return render_template("product.html.jinja",product = result)
 @app.route("/signup", methods = ["POST", "GET"])
 def signup():
-    if request.method == "POST":
-        first_name = request.form["fname"]
-        last_name = request.form["lname"]
-        username = request.form["username"]
-        password = request.form["pass"]
-        confirmpassword = request.form["confirmpass"]
-        email = request.form["email"]
-        address = request.form["address"]
-        conn = connectdb()
-        cursor = conn.cursor()
-        if len(password) < 8:
-            flash("Password contains less than 8 characters")
-        if confirmpassword != password:
-            flash("The passwords don't match")
-        else:
-            try:
-                cursor.execute(f"""
-                INSERT INTO `Customer` 
-                    (`first_name`, `last_name`, `username`, `password`, `email`, `address`)
-                VALUE
-                    ('{first_name}', '{last_name}', '{username}', '{password}', '{email}', '{address}');
-                """)
-            except pymysql.err.IntegrityError:
-                flash("Username/Email is already in use")
-            else:    
-                return redirect("/signin") 
-            finally:
-                cursor.close()
-                conn.close()
+    if flask_login.current_user.is_authenticated:
+        return redirect ("/")
+    else:
+        if request.method == "POST":
+            first_name = request.form["fname"]
+            last_name = request.form["lname"]
+            username = request.form["username"]
+            password = request.form["pass"]
+            confirmpassword = request.form["confirmpass"]
+            email = request.form["email"]
+            address = request.form["address"]
+            conn = connectdb()
+            cursor = conn.cursor()
+            if len(password) < 8:
+                flash("Password contains less than 8 characters")
+            if confirmpassword != password:
+                flash("The passwords don't match")
+            else:
+                try:
+                    cursor.execute(f"""
+                    INSERT INTO `Customer` 
+                        (`first_name`, `last_name`, `username`, `password`, `email`, `address`)
+                    VALUE
+                        ('{first_name}', '{last_name}', '{username}', '{password}', '{email}', '{address}');
+                    """)
+                except pymysql.err.IntegrityError:
+                    flash("Username/Email is already in use")
+                else:    
+                    return redirect("/signin") 
+                finally:
+                    cursor.close()
+                    conn.close()
 
-    return render_template("signup.html.jinja")
+        return render_template("signup.html.jinja")
     
 @app.route("/signin", methods = ["POST","GET"])
 def signin():
-    if request.method == "POST":
-        username = request.form["username"].strip()
-        password = request.form["pass"]
-        conn = connectdb()
-        cursor = conn.cursor()
-        cursor.execute(f"SELECT * FROM `Customer` WHERE `username` = '{username}' OR `email` = '{username}';")
-        result = cursor.fetchone()
-        if result is None:
-            flash("Your Username/Password is incorrect")
-        elif password != result["password"]:
-            flash("Your Username/Password is incorrect")
-        else:
-            user = User(result["id"], result["username"], result["email"], result["first_name"], result["last_name"])
-            flask_login.login_user(user)
-            return redirect("/browse")
-    return render_template("signin.html.jinja")
+    if flask_login.current_user.is_authenticated:
+        return redirect ("/")
+    else:
+        if request.method == "POST":
+            username = request.form["username"].strip()
+            password = request.form["pass"]
+            conn = connectdb()
+            cursor = conn.cursor()
+            cursor.execute(f"SELECT * FROM `Customer` WHERE `username` = '{username}' OR `email` = '{username}';")
+            result = cursor.fetchone()
+            if result is None:
+                flash("Your Username/Password is incorrect")
+            elif password != result["password"]:
+                flash("Your Username/Password is incorrect")
+            else:
+                user = User(result["id"], result["username"], result["email"], result["first_name"], result["last_name"])
+                flask_login.login_user(user)
+                return redirect("/browse")
+        return render_template("signin.html.jinja")
 
 @app.route("/logout")
 def logout():
     flask_login.logout_user()
     return redirect("/")
+@app.route("/cart")
+@flask_login.login_required
+def cart():
+    return "cart Page"
