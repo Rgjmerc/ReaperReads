@@ -19,7 +19,13 @@
             <p class="fs-5">{{product["description"]}}</p>
             <h4>${{product["price"]}}</h4>
             <br>
-            <button type="button" class="fs-4 btn btn-warning w-75"> Add to Cart </button>
+            <form method="post" action="/product/{{product['id']}}/cart">
+            <div class="mb-3 col-2">
+              <label for="qty" class="form-label">Qty</label>
+              <input type="number" class="form-control" id="qty" placeholder="Quantity" min="1" value="1" max="15" name="qty">
+            </div>
+              <button type="submit" class="fs-4 btn btn-warning w-75" > Add to Cart </button>
+            </form>
         </div>    
     </div>
   </div>

@@ -29,6 +29,7 @@ class User:
         return str(self.id)
 
 @login_manager.user_loader
+
 def load_user(user_id):
     conn = connectdb()
     cursor = conn.cursor()
@@ -80,6 +81,25 @@ def product_page(product_id):
     cursor.close()
     conn.close()
     return render_template("product.html.jinja",product = result)
+
+@app.route("/product/<product_id>/cart", methods = ["POST"])
+@flask_login.login_required
+def add_cart(product_id):
+    quantity = request.form["qty"]
+    customer_id = flask_login.current_user.id
+    conn = connectdb()
+    cursor = conn.cursor()
+    cursor.execute(f"""
+    INSERT INTO `Cart`
+        (`quantity`, `customer_id`, `product_id`)
+    VALUE
+        ('{quantity}','{customer_id}','{product_id}')
+    """)
+    cursor.close()
+    conn.close()
+    return redirect ("/cart")
+
+
 @app.route("/signup", methods = ["POST", "GET"])
 def signup():
     if flask_login.current_user.is_authenticated:
@@ -136,14 +156,19 @@ def signin():
             else:
                 user = User(result["id"], result["username"], result["email"], result["first_name"], result["last_name"])
                 flask_login.login_user(user)
+                cursor.close()
+                conn.close()
                 return redirect("/browse")
+        cursor.close()
+        conn.close()    
         return render_template("signin.html.jinja")
 
 @app.route("/logout")
 def logout():
     flask_login.logout_user()
     return redirect("/")
+
 @app.route("/cart")
 @flask_login.login_required
 def cart():
-    return "cart Page"
+    return render_template("cart.html.jinja")
