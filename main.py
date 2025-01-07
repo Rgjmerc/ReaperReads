@@ -94,6 +94,8 @@ def add_cart(product_id):
         (`quantity`, `customer_id`, `product_id`)
     VALUE
         ('{quantity}','{customer_id}','{product_id}')
+    ON DUPLICATE KEY UPDATE
+        `quantity` = `quantity` + {quantity}
     """)
     cursor.close()
     conn.close()
@@ -178,6 +180,32 @@ def cart():
     FROM `Cart` JOIN `Product` ON `product_id` = `Product`.`id`
     WHERE `customer_id` = {customer_id};""")
     result = cursor.fetchall()
+    total = 0
+    for product in result:
+        quantity = product["quantity"]
+        price = product["price"]
+        item_total = price * quantity
+        total = item_total + total
     cursor.close()
     conn.close()
-    return render_template("cart.html.jinja", products = result)
+    return render_template("cart.html.jinja", products = result, total = total)
+
+@app.route("/cart/<cart_id>/del", methods = ["POST"])
+@flask_login.login_required
+def delete(cart_id):
+    conn = connectdb()
+    cursor = conn.cursor()
+    cursor.execute(f"DELETE FROM `Cart` WHERE `id`={cart_id};")
+    cursor.close()
+    conn.close()
+    return redirect("/cart")
+@app.route("/cart/<cart_id>/upd", methods = ["POST"])
+@flask_login.login_required
+def upd(cart_id):
+    conn = connectdb()
+    cursor = conn.cursor()
+    qty = request.form["qty"]
+    cursor.execute(f"UPDATE `Cart` SET `quantity`={qty} WHERE `id`={cart_id};")
+    cursor.close()
+    conn.close()
+    return redirect("/cart")
