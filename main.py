@@ -209,3 +209,27 @@ def upd(cart_id):
     cursor.close()
     conn.close()
     return redirect("/cart")
+@app.route("/checkout")
+@flask_login.login_required
+def checkout():
+    customer_id = flask_login.current_user.id
+    conn = connectdb()
+    cursor = conn.cursor()
+    cursor.execute(f"""SELECT `name`,`price`,`quantity`,`image`,`product_id`,`Cart`.`id` 
+    FROM `Cart` JOIN `Product` ON `product_id` = `Product`.`id`
+    WHERE `customer_id` = {customer_id};""")
+    result = cursor.fetchall()
+    total = 0
+    tax = 0.08875
+    for product in result:
+        quantity = product["quantity"]
+        price = product["price"]
+        item_total = price * quantity
+        total = item_total + total
+
+    tax_total = total * tax
+    overall_total = total + tax_total
+    
+    cursor.close()
+    conn.close()
+    return render_template("checkout.html.jinja", products = result, total = total, overall_total = overall_total, tax_total = tax_total)
