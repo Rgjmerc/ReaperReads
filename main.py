@@ -199,6 +199,7 @@ def delete(cart_id):
     cursor.close()
     conn.close()
     return redirect("/cart")
+
 @app.route("/cart/<cart_id>/upd", methods = ["POST"])
 @flask_login.login_required
 def upd(cart_id):
@@ -209,6 +210,7 @@ def upd(cart_id):
     cursor.close()
     conn.close()
     return redirect("/cart")
+
 @app.route("/checkout")
 @flask_login.login_required
 def checkout():
@@ -229,7 +231,44 @@ def checkout():
 
     tax_total = total * tax
     overall_total = total + tax_total
-    
+
     cursor.close()
     conn.close()
     return render_template("checkout.html.jinja", products = result, total = total, overall_total = overall_total, tax_total = tax_total)
+
+@app.route("/sale")
+@flask_login.login_required
+def sale():
+    conn = connectdb()
+    cursor = conn.cursor()
+    customer_id = flask_login.current_user.id
+    cursor.execute(f"INSERT INTO `Sale`  (`customer_id`) VALUES ({customer_id});")
+    sale_id = cursor.lastrowid()
+    cursor.execute(f"SELECT `product_id`,`quantity` FROM `Cart`;")
+    result = cursor.fetchall()
+    for product in result:
+        quantity = product["quantity"]
+        product_id = product["product_id"]
+        cursor.execute(f"INSERT INTO `SaleProduct` (`sale_id`,`product_id`,`quantity`) VALUES ({sale_id},{product_id},{quantity});")
+    saleproduct = cursor.fetchall()
+    cursor.execute(f"DELETE FROM `Cart` WHERE `customer_id` = {customer_id};")
+    cursor.close()
+    conn.close()
+    return redirect("/thanks", saleproduct = saleproduct)
+@app.route("/product/<product_id>/review", methods = ["POST"])
+def review(product_id):
+    conn = connectdb()
+    cursor = conn.cursor()
+    customer_id = flask_login.current_user.id
+    content = request.form["content"]
+    rate = request.form["rate"]
+    cursor.execute(f"""
+    INSERT INTO `Reviews`
+    (`customer_id`,`product_id`,`content`,`rating`)
+    VALUE
+    ('{customer_id}','{product_id}','{content}','{rate}')
+    ;""")
+    result = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return render_template("product.html.jinja",product = result)
