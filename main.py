@@ -78,9 +78,17 @@ def product_page(product_id):
     result = cursor.fetchone()
     if result is None:
         abort(404)
+    cursor.execute(f""" SELECT
+    `customer_id`,`product_id`,`content`,`rating`,
+    `Reviews`.`timestamp`,`username`
+    FROM `Reviews`
+    JOIN `Customer` ON `customer_id` = `Customer`.`id`
+    WHERE `product_id` = {product_id};
+    """)
+    results = cursor.fetchall()
     cursor.close()
     conn.close()
-    return render_template("product.html.jinja",product = result)
+    return render_template("product.html.jinja",product = result, reviews = results)
 
 @app.route("/product/<product_id>/cart", methods = ["POST"])
 @flask_login.login_required
@@ -255,6 +263,7 @@ def sale():
     cursor.close()
     conn.close()
     return redirect("/thanks", saleproduct = saleproduct)
+
 @app.route("/product/<product_id>/review", methods = ["POST"])
 def review(product_id):
     conn = connectdb()
@@ -268,7 +277,6 @@ def review(product_id):
     VALUE
     ('{customer_id}','{product_id}','{content}','{rate}')
     ;""")
-    result = cursor.fetchall()
     cursor.close()
     conn.close()
-    return render_template("product.html.jinja",product = result)
+    return redirect(f"/product/{product_id}")
