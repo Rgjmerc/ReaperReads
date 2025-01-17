@@ -104,7 +104,7 @@ def add_cart(product_id):
         ('{quantity}','{customer_id}','{product_id}')
     ON DUPLICATE KEY UPDATE
         `quantity` = `quantity` + {quantity}
-    """)
+    ;""")
     cursor.close()
     conn.close()
     return redirect ("/cart")
@@ -168,9 +168,7 @@ def signin():
                 flask_login.login_user(user)
                 cursor.close()
                 conn.close()
-                return redirect("/browse")
-        cursor.close()
-        conn.close()    
+                return redirect("/browse")   
         return render_template("signin.html.jinja")
 
 @app.route("/logout")
@@ -219,7 +217,7 @@ def upd(cart_id):
     conn.close()
     return redirect("/cart")
 
-@app.route("/checkout")
+@app.route("/cart/checkout")
 @flask_login.login_required
 def checkout():
     customer_id = flask_login.current_user.id
@@ -251,7 +249,7 @@ def sale():
     cursor = conn.cursor()
     customer_id = flask_login.current_user.id
     cursor.execute(f"INSERT INTO `Sale`  (`customer_id`) VALUES ({customer_id});")
-    sale_id = cursor.lastrowid()
+    sale_id = cursor.lastrowid
     cursor.execute(f"SELECT `product_id`,`quantity` FROM `Cart`;")
     result = cursor.fetchall()
     for product in result:
@@ -262,7 +260,12 @@ def sale():
     cursor.execute(f"DELETE FROM `Cart` WHERE `customer_id` = {customer_id};")
     cursor.close()
     conn.close()
-    return redirect("/thanks", saleproduct = saleproduct)
+    return redirect("/sale/thanks")
+
+@app.route("/sale/thanks")
+@flask_login.login_required
+def thanks():
+    return render_template("thanks.html.jinja")
 
 @app.route("/product/<product_id>/review", methods = ["POST"])
 def review(product_id):
@@ -276,7 +279,43 @@ def review(product_id):
     (`customer_id`,`product_id`,`content`,`rating`)
     VALUE
     ('{customer_id}','{product_id}','{content}','{rate}')
-    ;""")
+    ON DUPLICATE KEY UPDATE 
+    `content` = "{content}",
+    `rating` = "{rate}";
+    """)
     cursor.close()
     conn.close()
     return redirect(f"/product/{product_id}")
+
+@app.route("/orders")
+@flask_login.login_required
+def orders():
+    conn = connectdb()
+    cursor = conn.cursor()
+    customer_id = flask_login.current_user.id
+    cursor.execute(f"SELECT * FROM `Sale` WHERE `customer_id` = {customer_id};")
+    results = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return render_template("orders.html.jinja", sales = results)
+
+@app.route("/orders/<sale_id>")
+@flask_login.login_required
+def past_orders(sale_id):
+    conn = connectdb()
+    cursor = conn.cursor()
+    cursor.execute(f"""
+        SELECT 
+            `name`, 
+            `price`, 
+            `quantity`, 
+            `image`, 
+            `product_id`, 
+            `SaleProduct`.`id` 
+        FROM `SaleProduct` 
+        JOIN `Product` ON `product_id` = `Product`.`id` 
+        WHERE `sale_id` = {sale_id};""")
+    results = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return render_template("past_orders.html.jinja", products = results)

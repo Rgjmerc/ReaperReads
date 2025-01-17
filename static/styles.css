@@ -1,0 +1,26 @@
+body{
+    background-color: #304390;
+}
+h1{
+    color: #9eb8ce;
+}
+.bg-card-color{
+    background-color: #37279f;
+}
+.custom-text{
+    color: #7bacd7;
+}
+.prpl-txt{
+    color: #9c91e6;
+    text-decoration-color: #9c91e6;
+}
+.page-bg{
+    background-color: #304390;
+}
+
+.table {
+    --bs-table-bg: #304390;
+    --bs-border-width: 1;
+    --bs-table-border-color: #6154b5;
+    --bs-table-color: #7bacd7;
+}
